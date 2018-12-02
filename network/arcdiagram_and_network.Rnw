@@ -1,0 +1,204 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx, verbatim}
+\usepackage{alltt}
+\usepackage{enumitem}
+\usepackage{color}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{linkcolor}{rgb}{0.066,0.545,0.890}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  urlcolor=linkcolor,
+  linkcolor=linkcolor
+}
+\setlength{\textwidth}{6.5in} 
+\setlength{\textheight}{9in}
+\setlength{\oddsidemargin}{0in} 
+\setlength{\evensidemargin}{0in}
+\setlength{\topmargin}{-1.5cm}
+\newcommand{\arcdi}{\texttt{arcdiagram}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+
+\begin{document}
+\title{Arc Diagrams with \arcdi{} and \code{network}}
+\author{
+ Gaston Sanchez\\
+ \small \href{http://www.gastonsanchez.com}{www.gastonsanchez.com}
+}
+\date{}
+\maketitle
+
+
+\section{Introduction}
+\arcdi{} is a package for producing pretty arc diagrams of graphs in R. You can think of \arcdi{} as a plugin of the package \code{igraph} (by Gabor Csardi and Tamas Nepusz). In this document we will discuss how to use \arcdi{} to produce arc diagrams of graphs from the package \texttt{network} (by Carter Butts, David Hunter, and Mark Handcock).
+
+
+
+\section{R package \code{network}}
+R has several packages dedicated to graphs and network analysis. There is even a \textbf{CRAN Task View} for graphical models that you can check at: \\
+\href{http://cran.r-project.org/web/views/gR.html}{http://cran.r-project.org/web/views/gR.html}
+
+\arcdi{} has been designed \textit{to fit like a glove} for graph edge lists obtained from \code{igraph}. However, graph edge lists can also be obtained using the package \code{network}. Let's see how to play with \arcdi{} and \code{network}. Warning: I'm assuming that you already checked the introductory documentation of the \arcdi{} package available at: \\
+\href{http://www.gastonsanchez.com/software/arcdiagram_introduction.pdf}{http://www.gastonsanchez.com/software/arcdiagram\_introduction.pdf} 
+
+\subsubsection*{Step 1: Load packages}
+First let's load the packages \arcdi{} and \code{network} (I'm assuming you already installed them)
+<<libraries, message=FALSE>>=
+# load 'arcdiagram'
+library(arcdiagram)
+
+# load 'network'
+library(network)
+@
+
+
+\subsubsection*{Step 2: Toy example}
+Let's start with a very simple example. We will generate a random graph with 7 nodes. One way to do this is by generating an adjacency matrix first and then create the graph with the function \code{network()}: 
+<<toy_example>>=
+# generate a random adjacency matrix
+set.seed(95)
+toy_matrix = matrix(rbinom(49,1,.25),7,7)
+diag(toy_matrix) = 0
+
+# create a graph from the adjacency matrix
+toy_graph = network(toy_matrix, directed=FALSE)
+@
+
+
+\subsubsection*{Step 2: Extract \texttt{edgelist}}
+Once we have the network, we need to extract the edge list which will be used as the main argument for \code{arcplot()}. The way to obtain an edge list from a \code{"network"} object is with the function \code{as.matrix()} and the argument \code{matrix.type = "edgelist"}
+<<toy_edgelist>>=
+# edgelist
+toy_edges = as.matrix(toy_graph, matrix.type="edgelist")
+@
+
+
+\subsubsection*{Step 3: Plot arc diagram}
+The edge list \code{toy\_edges} is all you need to produce an arc diagram with \code{arcplot()}:
+<<arcplot_edgelist, fig.width=6, fig.height=4, out.width='.8\\linewidth', out.height='.5\\linewidth', fig.align='center', echo=c(1,3)>>=
+# plot arc diagram
+op = par(mar = c(1, 0.5, 0.5, 0.5))
+arcplot(toy_edges, las=1)
+par(op)
+@
+
+
+
+\section{Florentine Weddings Network}
+Let's see another example using a more interesting data set. We will use the data \code{"flo"} which is one of the datasets available in \code{network}. This data set consists of weddings among leading Florentine families (in Italy). 
+
+\subsubsection*{Step 1: Data \texttt{flo}}
+The way to get a graph (i.e. network) from the data \code{"flo"} is by using the function \code{network()}: 
+<<data_flo>>=
+# load data 'flo'
+data(flo)
+
+# network
+netflo = network(flo)
+
+# what does 'netflo' look like?
+netflo
+@
+
+
+\subsubsection*{Step 2: Edgelist}
+Because the main argument for \code{arcplot()} is an edge list, we need to use \code{as.matrix()} with its argument \code{matrix.type = "edgelist"} to get such a list form \code{netflo}:
+<<flo_edgelist>>=
+# edgelist
+flo_edges = as.matrix(netflo, matrix.type="edgelist")
+@
+
+Now we can get a first arc diagram:
+<<flo_plot1, fig.width=6, fig.height=4, out.width='.9\\linewidth', out.height='.6\\linewidth', fig.align='center', echo=c(1,3)>>=
+# second plot
+op = par(mar = c(2, 0.5, 1, 0.5))
+arcplot(flo_edges, las=1)
+par(op)
+@
+
+
+\subsubsection*{Step 3: Node Labels}
+If you inspect either the object \code{netflo} or the edgelist \code{flo\_edges}, you will see that we have the names of the nodes (i.e. the vertices) as an attribute, for instance:
+<<print_netflo>>=
+# print netflo
+netflo
+@
+
+As you can see in the last lines of the output, \code{netflo} contains the vertex attribute names \code{vertex.names}. One way to get these names is by using the function \code{get.vertex.attribute()}:
+<<fail_attribute>>=
+# try to get vertex names
+get.vertex.attribute(netflo, "vertex.names")
+@
+
+If by any chance you find an error message telling you something like this (don't panic): 
+\begin{verbatim}
+Error in get.vertex.attribute(netflo, "vertex.names") : 
+  Not a graph object
+\end{verbatim}
+
+The cause of the problem is a ``compatibility'' issue between the packages \code{igraph} and \code{network} (remember that \arcdi{} depends on \code{igraph}). Both packages have the same name for some of their functions ---\code{get.vertex.attribute()} among them---. Actually, since we first load \arcdi{}, this implies that the homonym functions of \code{network} are \textbf{masked} by those of \code{igraph}. The solution? Use the double colon operator: look for \code{help("::")} in your R console to get more information. To get the vertex names from \code{netflo} we have to specify the \textbf{namespace} under which the required \code{get.vertex.attribute()} function is located:
+<<flo_get_vertex_names>>=
+# get vertex names
+flo_names = network::get.vertex.attribute(netflo, "vertex.names")
+
+# show me the names
+flo_names
+@
+
+An alternative way to get the vertex names is by extracting them directly from the edge list \code{flo\_edges} with the function \code{attributes()}:
+<<flo_get_labels>>=
+# another way to get vertex names
+attributes(flo_edges)$vnames
+@
+Of course, this a painless way to get the names, but I wanted to show you the hard way in case you find yourself trapped in that quandary.
+
+
+\subsubsection*{Step 4: Arc plot attempt}
+Having extracted the \code{vertex.names}, it seems that we are ready to plot an arc diagram with the node labels:
+<<flo_plot2>>=
+# arc plot with node labels
+arcplot(flo_edges, labels=flo_names)
+@
+
+Well, we are not ready yet. The problem is that we have more labels than nodes in the edge list (node 12 does not appear in \code{flo\_edges}). The solution is a bit elaborated: first we need to get the node numbers from the edgelist, and then we have to select their corresponding names:
+<<flo_labels>>=
+# numeric indices in 'flo_edges'
+temp = unique(as.vector(t(flo_edges)))
+temp
+
+# node labels
+flo_labels = attributes(flo_edges)$vnames[temp]
+
+# check it
+flo_labels
+@
+
+
+\subsubsection*{Step 5: Final plot}
+Now we are ready to produce the desired arc diagram:
+<<flo_plot3, fig.width=6, fig.height=4, out.width='.9\\linewidth', out.height='.6\\linewidth', fig.align='center', echo=c(1,3)>>=
+# second plot
+op = par(mar = c(5, 0, 1, 0))
+arcplot(flo_edges, labels=flo_labels)
+par(op)
+@
+
+
+
+%--------------------------------------------
+\vspace{5 mm}
+\section*{Some References}
+\begin{itemize}
+ \item Arc Diagrams in 'Visual Complexity' (by Manuel Lima) \\
+  \href{http://www.visualcomplexity.com/vc/index.cfm?method=Arc\%20Diagrams}{http://www.visualcomplexity.com/vc/index.cfm?method=Arc\%20Diagrams}
+ \item Protovis by Mike Bostock \\
+  \href{http://mbostock.github.com/protovis/ex/arc.html}{http://mbostock.github.com/protovis/ex/arc.html}
+ \item Arc Diagrams: Visualizing Structure in Strings by Martin Wattenberg \\
+  \href{http://hint.fm/papers/arc-diagrams.pdf}{http://hint.fm/papers/arc-diagrams.pdf}
+ \item R-chie: A web server and R package for plotting arc diagrams of RNA secondary structures (by Daniel Lai, Jeff R. Proctor, Jing Yun A. Zhu, and Irmtraud M. Meyer) \\
+  \href{http://www.e-rna.org/r-chie/index.cgi}{http://www.e-rna.org/r-chie/index.cgi}
+\end{itemize}
+
+
+\end{document}
